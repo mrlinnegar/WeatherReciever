@@ -5,8 +5,9 @@
 #include <Wire.h>
 #include "Button.h"
 
-#define DISPLAY_BUTTON_PIN 10     // the number of the pushbutton pin
-#define DISPLAY_BUTTON_HOLD_TIME 1000
+#define DISPLAY_BUTTON_PIN 6     // the number of the pushbutton pin
+#define NEXT_BUTTON_PIN 10
+#define DISPLAY_BUTTON_HOLD_TIME 100
 #define LED_PIN 9      // the number of the LED pin
 #define SQW_INPUT_PIN 2   // Input pin to read SQW
 #define SQW_OUTPUT_PIN 13 // LED to indicate SQW's state
@@ -14,13 +15,13 @@
 
 LiquidCrystal lcd(8, 7, 5, 4, 3, 2);
  
-unsigned long found;
-unsigned long buttonPressedTime;
-boolean lightState = 1;
+unsigned long lastUpdate;
+boolean refresh;
 float temp;
 float pressure;
+int toDraw = 0;
 Button displayButton = Button();
-
+Button nextButton = Button();
 
 void createChars(){
   for(int i = 0; i < 8; i++){
@@ -46,21 +47,19 @@ void createChars(){
 
 void setup()
 {
+    Serial.begin(9600);
     createChars();
     displayButton.init(DISPLAY_BUTTON_PIN, DISPLAY_BUTTON_HOLD_TIME);
-    pinMode(LED_PIN, OUTPUT);      
-    //pinMode(SQW_INPUT_PIN, INPUT_PULLUP);
-    //pinMode(SQW_OUTPUT_PIN, OUTPUT);
-    //digitalWrite(SQW_OUTPUT_PIN, digitalRead(SQW_INPUT_PIN));
-    
+    nextButton.init(NEXT_BUTTON_PIN, DISPLAY_BUTTON_HOLD_TIME);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);      
     lcd.begin(16, 2);
     lcd.clear();
     lcd.print(" Connecting...");
-
+    lastUpdate = millis();
+    
     rtc.begin();
-    //rtc.writeSQW(SQW_SQUARE_1);
-    
-    
+        
     // Initialise the IO and ISR
     vw_set_ptt_inverted(true); // Required for DR3100
     vw_setup(2000);	 // Bits per sec
@@ -75,11 +74,25 @@ void drawTemp(){
   lcd.print(String(temp));
   lcd.print((char)223);
   lcd.print(F("c"));
-  lcd.setCursor(0, 1);
+  drawChart();
+}
+
+void drawPressure(){
+  lcd.clear();
+  lcd.setCursor(0, 0);
   lcd.print("Press");
   
-  lcd.setCursor(7,1);
+  lcd.setCursor(7,0);
   lcd.print(String(pressure)+"mb");
+  drawChart();
+}
+
+
+void drawChart(){
+  lcd.setCursor(0,1);
+  for(int i = 0; i < 8; i++){
+    lcd.write(char(i));
+  }
 }
 
 void drawTime()
@@ -109,9 +122,9 @@ void drawTime()
 void loop()
 {
     static int8_t lastMinute = -1;
-    
-    rtc.update();
     displayButton.sample();
+
+    rtc.update();
     uint8_t buf[VW_MAX_MESSAGE_LEN];
     uint8_t buflen = VW_MAX_MESSAGE_LEN;
 
@@ -122,10 +135,34 @@ void loop()
 
       temp = (temperature / 100.00) - 20.00;
       pressure = (pressureData / 100.00) + 926.00;
-      drawTemp();
     }
 
-
+    if(displayButton.isPressed()){
+      toDraw++;
+      if(toDraw >2){
+        toDraw = 0;
+      }
+      refresh = true;
+    }
+    
+    if(lastUpdate + 1000 < millis() || refresh){
+      switch(toDraw){
+        case 0:
+          drawTemp();
+          break;
+        case 1:
+          drawPressure();
+          break;
+        case 2:
+          drawTime();
+          break;
+         default:
+          break;
+        }
+       refresh = false;
+      lastUpdate = millis();
+    }
+    
     /*
     if (rtc.minute() != lastMinute) // If the second has changed
     {
