@@ -1,8 +1,9 @@
 #include "Button.h"
 #include "Arduino.h"
 #define LAST_BUTTON_STATE 1
-#define WAS_PRESSED 2
 #define BUTTON_STATE 3
+#define WAS_PRESSED 2
+#define RESET_FLAG 4
 
 
 Button::Button(void){}
@@ -26,9 +27,9 @@ void Button::sample(){
     if (reading != bitRead(state, BUTTON_STATE) ) {
       bitWrite(state, BUTTON_STATE, reading);
 
-      if(reading == HIGH &&  !bitRead(state, WAS_PRESSED)){
-        bitWrite(state, WAS_PRESSED, 1);
-      }
+      if(reading == HIGH &&  !bitRead(state, RESET_FLAG)){
+        bitWrite(state, RESET_FLAG, 0);
+      } 
     }
   }
   
@@ -37,11 +38,18 @@ void Button::sample(){
 
 boolean Button::wasPressed(){
   boolean buttonState = bitRead(state, BUTTON_STATE);
-  boolean wasPressed = bitRead(state, WAS_PRESSED);
-  if(wasPressed == 1 && buttonState == 1){
-    bitWrite(state, WAS_PRESSED, 0);
+  boolean resetFlag = bitRead(state, RESET_FLAG);
+  if(buttonState == 1){
+    if(resetFlag == 0){
+      bitWrite(state, RESET_FLAG, 1);
+      return buttonState;
+    }
+    return 0;
+  } else {
+     bitWrite(state, RESET_FLAG, 0);
+     return buttonState;    
   }
-  return buttonState;  
+  
 }
 
 

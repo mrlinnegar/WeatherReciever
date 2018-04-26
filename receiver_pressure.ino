@@ -5,13 +5,11 @@
 #include <Wire.h>
 #include "Button.h"
 
-#define DISPLAY_BUTTON_PIN 6     // the number of the pushbutton pin
-#define NEXT_BUTTON_PIN 10
+#define PREV_BUTTON_PIN 12     // the number of the pushbutton pin
+#define NEXT_BUTTON_PIN 6
 #define DISPLAY_BUTTON_HOLD_TIME 100
 #define LED_PIN 9      // the number of the LED pin
-#define SQW_INPUT_PIN 2   // Input pin to read SQW
-#define SQW_OUTPUT_PIN 13 // LED to indicate SQW's state
-
+#define REFRESH_INTERVAL 1000
 
 LiquidCrystal lcd(8, 7, 5, 4, 3, 2);
  
@@ -20,7 +18,7 @@ boolean refresh;
 float temp;
 float pressure;
 int toDraw = 0;
-Button displayButton = Button();
+Button prevButton = Button();
 Button nextButton = Button();
 
 void createChars(){
@@ -49,7 +47,7 @@ void setup()
 {
     Serial.begin(9600);
     createChars();
-    displayButton.init(DISPLAY_BUTTON_PIN);
+    prevButton.init(PREV_BUTTON_PIN);
     nextButton.init(NEXT_BUTTON_PIN);
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);      
@@ -119,7 +117,8 @@ void drawTime()
 void loop()
 {
     static int8_t lastMinute = -1;
-    displayButton.sample();
+    nextButton.sample();
+    prevButton.sample();
 
     rtc.update();
     uint8_t buf[VW_MAX_MESSAGE_LEN];
@@ -134,26 +133,35 @@ void loop()
       pressure = (pressureData / 100.00) + 926.00;
     }
 
-    if(displayButton.wasPressed()){
+    if(nextButton.wasPressed()){
       toDraw++;
       if(toDraw >2){
         toDraw = 0;
       }
       refresh = true;
     }
+
+    if(prevButton.wasPressed()){
+      toDraw--;
+      if(toDraw <0){
+        toDraw = 2;
+      }
+      refresh = true;
+    }
     
-    if(lastUpdate + 1000 < millis() || refresh){
+    if(lastUpdate + REFRESH_INTERVAL < millis() || refresh){
       switch(toDraw){
         case 0:
-          drawTemp();
+          drawTimw();
           break;
         case 1:
           drawPressure();
           break;
         case 2:
-          drawTime();
+          drawTemp();
           break;
          default:
+          drawTime();
           break;
         }
        refresh = false;
