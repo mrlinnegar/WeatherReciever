@@ -49,8 +49,8 @@ void setup()
 {
     Serial.begin(9600);
     createChars();
-    displayButton.init(DISPLAY_BUTTON_PIN, DISPLAY_BUTTON_HOLD_TIME);
-    nextButton.init(NEXT_BUTTON_PIN, DISPLAY_BUTTON_HOLD_TIME);
+    displayButton.init(DISPLAY_BUTTON_PIN);
+    nextButton.init(NEXT_BUTTON_PIN);
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);      
     lcd.begin(16, 2);
@@ -99,23 +99,20 @@ void drawTime()
 {
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print(String(rtc.hour()) + ":"); // Print hour
+  lcd.print(String(rtc.hour()) + ":");    
   if (rtc.minute() < 10)
-    lcd.print('0'); // Print leading '0' for minute
-  lcd.print(String(rtc.minute())); // Print minute
+    lcd.print('0');                       
+  lcd.print(String(rtc.minute()));        
  
   lcd.setCursor(0,1);
 
-  // Few options for printing the day, pick one:
-  lcd.print(rtc.dayStr()); // Print day string
-  //Serial.print(rtc.dayC()); // Print day character
-  //Serial.print(rtc.day()); // Print day integer (1-7, Sun-Sat)
+  lcd.print(rtc.dayStr());               
   lcd.setCursor(8,0);
   lcd.print(String(rtc.date()) + "/");
   if (rtc.month() < 10)
-    lcd.print('0'); // Print leading '0' for minute// (or) print date
-  lcd.print(String(rtc.month()) + "/"); // Print month
-  lcd.println(String(rtc.year()));        // Print year
+    lcd.print('0');                      
+  lcd.print(String(rtc.month()) + "/");  
+  lcd.println(String(rtc.year()));       
 }
 
 
@@ -137,7 +134,7 @@ void loop()
       pressure = (pressureData / 100.00) + 926.00;
     }
 
-    if(displayButton.isPressed()){
+    if(displayButton.wasPressed()){
       toDraw++;
       if(toDraw >2){
         toDraw = 0;
@@ -162,15 +159,6 @@ void loop()
        refresh = false;
       lastUpdate = millis();
     }
-    
-    /*
-    if (rtc.minute() != lastMinute) // If the second has changed
-    {
-      drawTime(); // Print the new time
-      
-      lastMinute = rtc.minute(); // Update lastSecond value
-    }
-    */
     
 }
 

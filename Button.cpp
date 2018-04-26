@@ -1,57 +1,48 @@
 #include "Button.h"
 #include "Arduino.h"
+#define LAST_BUTTON_STATE 1
+#define WAS_PRESSED 2
+#define BUTTON_STATE 3
+
 
 Button::Button(void){}
 
-void Button::init(byte setup_pin, unsigned int _hold_delay){
+void Button::init(byte setup_pin){
   pin = setup_pin; 
-  debounce_delay = 50;     
-  hold_delay = _hold_delay; 
-  
+  debounceDelay = 50;     
   pinMode(setup_pin, INPUT);
 
 }
 
 void Button::sample(){
-  boolean reading = digitalRead(pin);
-  Serial.println(reading);
-  bitWrite(state, 1, 0); //is_held = false;
-  if (reading != lastButtonState()) {
-    last_debounce_time = millis();
+  int reading = digitalRead(pin);
+
+  if (reading != bitRead(state, LAST_BUTTON_STATE)) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+
+    if (reading != bitRead(state, BUTTON_STATE) ) {
+      bitWrite(state, BUTTON_STATE, reading);
+
+      if(reading == HIGH &&  !bitRead(state, WAS_PRESSED)){
+        bitWrite(state, WAS_PRESSED, 1);
+      }
+    }
   }
   
-  if ((millis() - last_debounce_time) > debounce_delay) { //check for a debounce
-    bitWrite(state, 0, reading); // high or low
-    if(isPressed() && last_pressed_time == NULL) {
-      last_pressed_time = millis();
-    } else if(!isPressed()) {
-      last_pressed_time = NULL;
-      bitWrite(state, 1, 0); //is_held = false;
-    }
-
-  }
-
-  if(isPressed() && ((millis() - last_pressed_time) > hold_delay)) {
-      last_pressed_time = millis();
-      bitWrite(state, 1, true ); //is_held = true;
-  }
-
-  bitWrite(state, 2, reading);
+  bitWrite(state, LAST_BUTTON_STATE, reading);
 }
 
 boolean Button::wasPressed(){
-  return bitRead(state, 3);  
+  boolean buttonState = bitRead(state, BUTTON_STATE);
+  boolean wasPressed = bitRead(state, WAS_PRESSED);
+  if(wasPressed == 1 && buttonState == 1){
+    bitWrite(state, WAS_PRESSED, 0);
+  }
+  return buttonState;  
 }
 
-boolean Button::isPressed(){
-  return bitRead(state, 0);
-}
 
-boolean Button::isHeld() {
-  return bitRead(state, 1);
-}
-
-boolean Button::lastButtonState(){
-  return bitRead(state, 2);
-}
 
